@@ -598,7 +598,8 @@ $instances = $db->getSurveyInstances();
                                     </select>
                                     <button class="btn btn-go" onclick="openApi('go', document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">▶ GO</button>
                                     <button class="btn btn-off" onclick="openApi('off', document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">⏹ OFF</button>
-                                    <button class="btn btn-results" onclick="openApi('results', document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">📊 Results</button>
+                                    <button class="btn btn-results" onclick="openApi('results', document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">Results</button>
+                                    <button class="btn btn-results" onclick="openApi('results_simple', document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">Results Simple</button>
                                 </div>
                                 <div style="margin-top: 10px;">
                                     <button class="btn btn-edit" onclick="editQuestion(<?php echo $question['id']; ?>, '<?php echo addslashes($question['text']); ?>', '<?php echo addslashes($question['yes_text']); ?>', '<?php echo addslashes($question['no_text']); ?>')">
