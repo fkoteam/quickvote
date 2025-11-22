@@ -69,6 +69,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $questions = $db->getQuestions();
 $instances = $db->getSurveyInstances();
+
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -451,7 +453,53 @@ $instances = $db->getSurveyInstances();
                 flex-direction: column;
             }
         }
+
+
+        .api-buttons {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .instance-select {
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(138, 43, 226, 0.5);
+            color: #fff;
+            font-size: 0.9em;
+        }
+        
+        .btn-go {
+            background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%);
+            color: white;
+            padding: 8px 15px;
+            font-size: 0.9em;
+        }
+        
+        .btn-off {
+            background: linear-gradient(135deg, #606060 0%, #404040 100%);
+            color: white;
+            padding: 8px 15px;
+            font-size: 0.9em;
+        }
+        
+        .btn-results {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 15px;
+            font-size: 0.9em;
+        }
     </style>
+    <script>
+
+    function openApi(action, code, questionId) {
+        const url = `api.php?action=${action}&code=${code}&question_id=${questionId}`;
+        window.open(url, '_blank');
+    }
+
+    </script>
 </head>
 <body>
     <div class="container">
@@ -542,14 +590,26 @@ $instances = $db->getSurveyInstances();
                                 </div>
                             </div>
                             <div class="question-actions">
-                                <button class="btn btn-edit" onclick="editQuestion(<?php echo $question['id']; ?>, '<?php echo addslashes($question['text']); ?>', '<?php echo addslashes($question['yes_text']); ?>', '<?php echo addslashes($question['no_text']); ?>')">
-                                    ✏️ Editar
-                                </button>
-                                <form method="POST" style="display: inline;" onsubmit="return confirm('¿Eliminar esta pregunta?');">
-                                    <input type="hidden" name="action" value="delete_question">
-                                    <input type="hidden" name="question_id" value="<?php echo $question['id']; ?>">
-                                    <button type="submit" class="btn btn-danger">🗑️ Eliminar</button>
-                                </form>
+                                <div class="api-buttons">
+                                    <select class="instance-select" id="instance_q<?php echo $question['id']; ?>">
+                                        <?php foreach ($instances as $inst): ?>
+                                            <option value="<?php echo $inst['code']; ?>"><?php echo $inst['code']; ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <button class="btn btn-go" onclick="openApi('go', document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">▶ GO</button>
+                                    <button class="btn btn-off" onclick="openApi('off', document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">⏹ OFF</button>
+                                    <button class="btn btn-results" onclick="openApi('results', document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">📊 Results</button>
+                                </div>
+                                <div style="margin-top: 10px;">
+                                    <button class="btn btn-edit" onclick="editQuestion(<?php echo $question['id']; ?>, '<?php echo addslashes($question['text']); ?>', '<?php echo addslashes($question['yes_text']); ?>', '<?php echo addslashes($question['no_text']); ?>')">
+                                        ✏️ Editar
+                                    </button>
+                                    <form method="POST" style="display: inline;" onsubmit="return confirm('¿Eliminar esta pregunta?');">
+                                        <input type="hidden" name="action" value="delete_question">
+                                        <input type="hidden" name="question_id" value="<?php echo $question['id']; ?>">
+                                        <button type="submit" class="btn btn-danger">🗑️ Eliminar</button>
+                                    </form>
+                                </div>
                             </div>
                         </div>
                     </div>
