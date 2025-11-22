@@ -101,7 +101,7 @@ switch ($action) {
         break;
 
     case 'results_simple':
-        header('Content-Type: application/text');
+        header('Content-Type: text/plain; charset=utf-8');
         // Obtener resultados de una pregunta
         $code = strtoupper($_GET['code'] ?? '');
         $questionId = intval($_GET['question_id'] ?? 0);
