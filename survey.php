@@ -51,7 +51,7 @@ $participantId = $_SESSION['participant_id'];
         }
 
         .container {
-            background: rgba(20, 20, 30, 0.95);
+            background: rgba(20, 20, 30, 0.65);
             padding: 50px 40px;
             border-radius: 25px;
             box-shadow: 0 0 60px rgba(138, 43, 226, 0.3),
@@ -229,8 +229,7 @@ $participantId = $_SESSION['participant_id'];
     <canvas id="stars-canvas"></canvas>
     
     <div class="container">
-        <div class="code-badge"><?php echo htmlspecialchars($code); ?></div>
-        
+     
         <div id="status">
             <div class="loader"></div>
             <div class="waiting-text">Esperando pregunta...</div>
