@@ -70,32 +70,7 @@ switch ($action) {
             
             $winner = 'empate';
             $winnerText = 'Empate';
-            if ($results['yes'] >= $results['no']) { //NO PUEDE HABER EMPATES
-                $winner = 'yes';
-                $winnerText = $question['yes_text'] ?? 'SÍ';
-            } elseif ($results['no'] > $results['yes']) {
-                $winner = 'no';
-                $winnerText = $question['no_text'] ?? 'NO';
-            }
-            $respuesta_simple = $winner;
-           
-        }
-        break;
-
-    case 'results_simple':
-        $respuesta_en_json = 0;
-        // Obtener resultados de una pregunta
-        $code = strtoupper($_GET['code'] ?? '');
-        $questionId = intval($_GET['question_id'] ?? 0);
-        
-        if ($code && $questionId) {
-            $results = $db->getResults($code, $questionId);
-            $question = $db->getQuestion($questionId);
-            $total = $results['yes'] + $results['no'];
-            
-            $winner = 'empate';
-            $winnerText = 'Empate';
-            if ($results['yes'] > $results['no']) {
+            if ($results['yes'] > $results['no']) { 
                 $winner = 'yes';
                 $winnerText = $question['yes_text'] ?? 'SÍ';
             } elseif ($results['no'] > $results['yes']) {
@@ -121,6 +96,32 @@ switch ($action) {
                     'no' => $total > 0 ? round(($results['no'] / $total) * 100, 2) : 0
                 ]
             ];
+           
+        }
+        break;
+
+    case 'results_simple':
+        $respuesta_en_json = 0;
+        // Obtener resultados de una pregunta
+        $code = strtoupper($_GET['code'] ?? '');
+        $questionId = intval($_GET['question_id'] ?? 0);
+        
+        if ($code && $questionId) {
+            $results = $db->getResults($code, $questionId);
+            $question = $db->getQuestion($questionId);
+            $total = $results['yes'] + $results['no'];
+            
+            $winner = 'empate';
+            $winnerText = 'Empate';
+            if ($results['yes'] >= $results['no']) { //NO PUEDE HABER EMPATES
+                $winner = 'yes';
+                $winnerText = $question['yes_text'] ?? 'SÍ';
+            } elseif ($results['no'] > $results['yes']) {
+                $winner = 'no';
+                $winnerText = $question['no_text'] ?? 'NO';
+            }
+            
+            $respuesta_simple = $winner;
         }
     break;
     
