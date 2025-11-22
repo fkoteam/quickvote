@@ -659,6 +659,9 @@ $instances = $db->getSurveyInstances();
                 <h3>Ver resultados:</h3>
                 <div class="api-endpoint">GET /api.php?action=results&code=CODIGO&question_id=ID</div>
 
+                <h3>Ver resultados (solo yes o no, sin json ni posibilidad de empate):</h3>
+                <div class="api-endpoint">GET /api.php?action=results_simple&code=CODIGO&question_id=ID</div>
+
                 <h3>Reiniciar respuestas:</h3>
                 <div class="api-endpoint">GET /api.php?action=reset&code=CODIGO&question_id=ID</div>
                 
