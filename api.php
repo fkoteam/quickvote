@@ -101,7 +101,7 @@ switch ($action) {
         break;
 
     case 'results_simple':
-        $respuesta_en_json = 0;
+        header('Content-Type: application/text');
         // Obtener resultados de una pregunta
         $code = strtoupper($_GET['code'] ?? '');
         $questionId = intval($_GET['question_id'] ?? 0);
