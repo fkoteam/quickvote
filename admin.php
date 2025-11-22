@@ -537,8 +537,8 @@ $instances = $db->getSurveyInstances();
                                 <strong>ID <?php echo $question['id']; ?>:</strong> 
                                 <?php echo htmlspecialchars($question['text']); ?>
                                 <div class="question-labels">
-                                    <span class="label-tag label-yes">✓ <?php echo htmlspecialchars($question['yes_text']); ?></span>
-                                    <span class="label-tag label-no">✗ <?php echo htmlspecialchars($question['no_text']); ?></span>
+                                    <span class="label-tag label-yes"><?php echo htmlspecialchars($question['yes_text']); ?></span>
+                                    <span class="label-tag label-no"><?php echo htmlspecialchars($question['no_text']); ?></span>
                                 </div>
                             </div>
                             <div class="question-actions">
