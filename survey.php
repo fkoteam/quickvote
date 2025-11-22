@@ -22,7 +22,7 @@ $participantId = $_SESSION['participant_id'];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Encuesta - <?php echo htmlspecialchars($code); ?></title>
+    <title><?php echo htmlspecialchars($code); ?></title>
     <style>
         * {
             margin: 0;
