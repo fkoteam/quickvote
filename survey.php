@@ -325,8 +325,8 @@ $participantId = $_SESSION['participant_id'];
         function showQuestion(text, yesText, noText) {
             document.getElementById('status').style.display = 'none';
             document.getElementById('questionText').textContent = text;
-            document.getElementById('btnYes').textContent = '✓ ' + yesText;
-            document.getElementById('btnNo').textContent = '✗ ' + noText;
+            document.getElementById('btnYes').textContent = yesText;
+            document.getElementById('btnNo').textContent = noText;
             document.getElementById('questionBox').classList.add('active');
             document.getElementById('answeredMsg').innerHTML = '';
             document.querySelectorAll('.btn').forEach(btn => btn.disabled = false);
