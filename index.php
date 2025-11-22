@@ -7,7 +7,7 @@ session_start();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Encuestas</title>
+    <title>Teatro interactivo</title>
     <style>
         * {
             margin: 0;
@@ -162,8 +162,8 @@ session_start();
     <canvas id="stars-canvas"></canvas>
     
     <div class="container">
-        <h1>✦ Encuesta Interactiva</h1>
-        <p class="subtitle">Ingresa tu código para comenzar</p>
+        <h1>Tus respuestas marcarán el camino</h1>
+        <p class="subtitle">Ingresa el código proporcionado para comenzar</p>
         
         <form action="survey.php" method="GET">
             <div class="input-group">
