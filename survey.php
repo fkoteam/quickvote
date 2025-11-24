@@ -1,170 +1,229 @@
 <?php
-// survey.php
+// survey.php - Interfaz de participante
 session_start();
 require_once 'db.php';
+
 $db = new Database();
 $code = isset($_GET['code']) ? strtoupper(trim($_GET['code'])) : '';
-if (!$code || !$db->surveyExists($code)) header("Location: index.php");
 
-if (!isset($_SESSION['participant_id'])) $_SESSION['participant_id'] = uniqid('p_', true);
-$uid = $_SESSION['participant_id'];
+if (!$code || !$db->surveyExists($code)) {
+    header('Location: index.php');
+    exit;
+}
+
+if (!isset($_SESSION['participant_id'])) {
+    $_SESSION['participant_id'] = uniqid('part_', true);
+}
+$participantId = $_SESSION['participant_id'];
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Votación <?= $code ?></title>
+    <title><?php echo htmlspecialchars($code); ?></title>
     <style>
-        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; text-align: center; }
-        .container { max-width: 600px; width: 100%; }
-        h1 { margin-bottom: 30px; font-size: 1.8em; text-shadow: 0 0 10px #8a2be2; }
-        .options-grid { display: flex; flex-direction: column; gap: 15px; }
-        .btn-opt { 
-            padding: 20px; font-size: 1.2em; border: none; border-radius: 12px; 
-            background: linear-gradient(135deg, #333 0%, #444 100%); 
-            color: #fff; cursor: pointer; transition: 0.2s; border: 1px solid #555;
-        }
-        .btn-opt:active { transform: scale(0.98); }
-        .btn-opt.selected { background: linear-gradient(135deg, #8a2be2 0%, #4a0080 100%); border-color: #a040ff; }
+        /* ESTILOS ORIGINALES CONSERVADOS */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #000; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; overflow: hidden; }
+        #stars-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+        .container { background: rgba(20, 20, 30, 0.65); padding: 50px 40px; border-radius: 25px; box-shadow: 0 0 60px rgba(138, 43, 226, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1); text-align: center; max-width: 700px; width: 100%; animation: fadeIn 0.5s ease; position: relative; z-index: 1; border: 1px solid rgba(138, 43, 226, 0.3); }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        #status { font-size: 1.8em; color: rgba(255, 255, 255, 0.5); margin: 30px 0; min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .waiting-text { margin-top: 20px; font-size: 0.6em; color: rgba(255, 255, 255, 0.4); }
+        .loader { border: 4px solid rgba(138, 43, 226, 0.2); border-top: 4px solid #8a2be2; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .question-box { display: none; animation: slideIn 0.5s ease; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .question-box.active { display: block; }
+        .question-text { font-size: 2em; color: #fff; margin-bottom: 40px; font-weight: 600; line-height: 1.4; text-shadow: 0 0 30px rgba(138, 43, 226, 0.3); }
+        .answered { background: linear-gradient(135deg, rgba(0, 176, 155, 0.2) 0%, rgba(150, 201, 61, 0.2) 100%); border: 1px solid rgba(0, 176, 155, 0.5); color: #96c93d; padding: 20px; border-radius: 12px; margin-top: 30px; font-size: 1.2em; animation: fadeIn 0.5s ease; }
         
-        #timer-bar-container { 
-            height: 10px; background: #333; border-radius: 5px; margin-bottom: 20px; 
-            overflow: hidden; display: none; 
+        /* NUEVOS ESTILOS PARA SOPORTAR N OPCIONES Y TIMER */
+        .buttons-grid { display: flex; flex-direction: column; gap: 15px; margin-top: 30px; }
+        .btn-option {
+            width: 100%; padding: 20px; font-size: 1.3em; font-weight: 700; border: none; border-radius: 15px; cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 1px;
+            /* Estilo neutro pero brillante, similar al tema */
+            background: linear-gradient(135deg, rgba(60, 60, 80, 0.8) 0%, rgba(40, 40, 60, 0.8) 100%);
+            border: 1px solid rgba(138, 43, 226, 0.3); color: white;
         }
-        #timer-bar { height: 100%; background: #00d2ff; width: 100%; transition: width 1s linear; }
-        
-        .waiting { color: #666; animation: pulse 1.5s infinite; margin-top: 50px;}
-        @keyframes pulse { 0%{opacity:0.5} 50%{opacity:1} 100%{opacity:0.5} }
+        .btn-option:hover { transform: translateY(-3px); box-shadow: 0 5px 20px rgba(138, 43, 226, 0.3); border-color: #8a2be2; }
+        .btn-option:active { transform: translateY(0); }
+        .btn-option:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-option.selected { background: linear-gradient(135deg, #8a2be2 0%, #4a0080 100%); border-color: #fff; box-shadow: 0 0 20px rgba(138, 43, 226, 0.6); }
+
+        /* BARRA DE PROGRESO */
+        .timer-container { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-bottom: 25px; overflow: hidden; display: none; }
+        .timer-bar { height: 100%; background: linear-gradient(90deg, #00b09b, #96c93d); width: 100%; transition: width 0.1s linear; }
+        .timer-bar.urgent { background: linear-gradient(90deg, #eb3349, #f45c43); }
     </style>
 </head>
 <body>
+    <canvas id="stars-canvas"></canvas>
+    
     <div class="container">
-        <div id="active-area" style="display:none">
-            <div id="timer-bar-container"><div id="timer-bar"></div></div>
-            <h1 id="q-text"></h1>
-            <div id="options-area" class="options-grid"></div>
+        <div id="status">
+            <div class="loader"></div>
+            <div class="waiting-text">Esperando pregunta...</div>
         </div>
-        <div id="waiting-area" class="waiting">
-            <h2>Esperando pregunta...</h2>
-            <div style="font-size:3em">⏳</div>
+        
+        <div id="questionBox" class="question-box">
+            <!-- Barra de tiempo -->
+            <div id="timerContainer" class="timer-container">
+                <div id="timerBar" class="timer-bar"></div>
+            </div>
+
+            <div class="question-text" id="questionText"></div>
+            
+            <!-- Contenedor dinámico de botones -->
+            <div class="buttons-grid" id="optionsContainer"></div>
+            
+            <div id="answeredMsg"></div>
         </div>
     </div>
 
     <script>
-        const CODE = '<?= $code ?>';
-        const UID = '<?= $uid ?>';
-        let currentQId = null;
-        let hasVoted = false;
+        const surveyCode = '<?php echo $code; ?>';
+        const participantId = '<?php echo $participantId; ?>';
+        let currentQuestionId = null;
+        let hasAnswered = false;
         let timerInterval = null;
 
-        function check() {
-            fetch(`api.php?action=check&code=${CODE}`)
-                .then(r => r.json())
+        // Wake Lock
+        let wakeLock = null;
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
+            } else { startNoSleepFallback(); }
+        }
+        document.addEventListener('visibilitychange', async () => { if (document.visibilityState === 'visible') await requestWakeLock(); });
+        function startNoSleepFallback() { /* Fallback video oculto */ }
+        requestWakeLock();
+
+        // Polling
+        function checkQuestion() {
+            fetch('api.php?action=check&code=' + surveyCode)
+                .then(response => response.json())
                 .then(data => {
-                    if (data.active) {
-                        if (data.question.id !== currentQId) {
-                            // Nueva pregunta
-                            setupQuestion(data.question);
-                        } else {
-                            // Actualizar tiempo si es la misma
-                            updateTimer(data.question);
+                    if (data.question_id) {
+                        // Si cambia la pregunta
+                        if (data.question_id !== currentQuestionId) {
+                            currentQuestionId = data.question_id;
+                            hasAnswered = false;
+                            showQuestion(data);
                         }
-                    } else {
-                        resetView();
+                        // Actualizar Timer siempre
+                        updateTimer(data.timer_total, data.timer_remaining);
+                    } else if (!data.question_id && currentQuestionId) {
+                        currentQuestionId = null;
+                        hideQuestion();
                     }
-                });
+                })
+                .catch(err => console.error('Error:', err));
         }
 
-        function setupQuestion(q) {
-            currentQId = q.id;
-            hasVoted = false;
+        function showQuestion(data) {
+            document.getElementById('status').style.display = 'none';
+            document.getElementById('questionText').textContent = data.question_text;
+            document.getElementById('questionBox').classList.add('active');
+            document.getElementById('answeredMsg').innerHTML = '';
             
-            document.getElementById('waiting-area').style.display = 'none';
-            document.getElementById('active-area').style.display = 'block';
-            document.getElementById('q-text').innerText = q.text;
+            // Generar botones dinámicos
+            const container = document.getElementById('optionsContainer');
+            container.innerHTML = '';
             
-            const optsDiv = document.getElementById('options-area');
-            optsDiv.innerHTML = '';
-            
-            q.options.forEach(opt => {
+            data.options.forEach(opt => {
                 const btn = document.createElement('button');
-                btn.className = 'btn-opt';
-                btn.innerText = opt.text;
-                btn.onclick = () => sendVote(opt.option_index, btn);
-                optsDiv.appendChild(btn);
+                btn.className = 'btn-option';
+                btn.textContent = opt.text;
+                btn.onclick = () => answer(opt.option_index, btn);
+                container.appendChild(btn);
             });
-
-            updateTimer(q);
         }
 
-        function updateTimer(q) {
-            const barContainer = document.getElementById('timer-bar-container');
-            const bar = document.getElementById('timer-bar');
+        function updateTimer(total, remaining) {
+            const container = document.getElementById('timerContainer');
+            const bar = document.getElementById('timerBar');
             
-            if (q.timer_total > 0 && q.timer_remaining !== null) {
-                barContainer.style.display = 'block';
-                const pct = (q.timer_remaining / q.timer_total) * 100;
-                bar.style.width = pct + '%';
+            if (total > 0 && remaining !== null) {
+                container.style.display = 'block';
+                const percentage = (remaining / total) * 100;
+                bar.style.width = percentage + '%';
                 
-                // Color cambia si queda poco
-                if (pct < 30) bar.style.background = '#ff0055';
-                else bar.style.background = '#00d2ff';
+                if (percentage < 30) bar.classList.add('urgent');
+                else bar.classList.remove('urgent');
 
-                if (q.timer_remaining <= 0) {
-                    disableButtons("Tiempo Agotado");
+                if (remaining <= 0) {
+                    disableButtons();
+                    if (!hasAnswered) {
+                         document.getElementById('answeredMsg').innerHTML = '<div class="answered" style="color:#f45c43; border-color:#f45c43; background:rgba(235,51,73,0.1)">⌛ Tiempo agotado</div>';
+                    }
                 }
             } else {
-                barContainer.style.display = 'none';
+                container.style.display = 'none';
             }
         }
 
-        function sendVote(idx, btnElement) {
-            if (hasVoted) return;
+        function hideQuestion() {
+            document.getElementById('status').style.display = 'flex';
+            document.getElementById('questionBox').classList.remove('active');
+            clearInterval(timerInterval);
+        }
+
+        function answer(index, btnElement) {
+            if (hasAnswered) return;
             
-            // Efecto visual inmediato
-            const allBtns = document.querySelectorAll('.btn-opt');
+            // UI Feedback
+            const allBtns = document.querySelectorAll('.btn-option');
             allBtns.forEach(b => b.style.opacity = '0.5');
             btnElement.style.opacity = '1';
             btnElement.classList.add('selected');
-            
+            disableButtons();
+
             fetch('api.php', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: `action=answer&code=${CODE}&question_id=${currentQId}&participant_id=${UID}&answer_index=${idx}`
-            }).then(r => r.json()).then(d => {
-                if(d.success) {
-                    hasVoted = true;
-                    disableButtons("Voto Enviado");
-                } else {
-                    alert(d.message);
+                body: `action=answer&code=${surveyCode}&question_id=${currentQuestionId}&participant_id=${participantId}&answer=${index}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    hasAnswered = true;
+                    document.getElementById('answeredMsg').innerHTML = '<div class="answered">✓ Respuesta registrada</div>';
                 }
             });
         }
 
-        function disableButtons(msg) {
-            const optsDiv = document.getElementById('options-area');
-            // Mantener solo visualmente, pero desactivar clicks
-            Array.from(optsDiv.children).forEach(btn => btn.disabled = true);
-            if (!document.getElementById('msg-status')) {
-                const div = document.createElement('div');
-                div.id = 'msg-status';
-                div.style.marginTop = '20px';
-                div.style.color = '#00ffaa';
-                div.innerText = msg;
-                document.getElementById('active-area').appendChild(div);
-            }
+        function disableButtons() {
+            document.querySelectorAll('.btn-option').forEach(btn => btn.disabled = true);
         }
 
-        function resetView() {
-            currentQId = null;
-            document.getElementById('active-area').style.display = 'none';
-            document.getElementById('waiting-area').style.display = 'block';
-            if(document.getElementById('msg-status')) document.getElementById('msg-status').remove();
-        }
+        setInterval(checkQuestion, 1000);
+        checkQuestion();
 
-        setInterval(check, 1000);
-        check();
+        // ESTRELLAS (Conservado del original)
+        const canvas = document.getElementById('stars-canvas');
+        const ctx = canvas.getContext('2d');
+        let stars = [];
+        const numStars = 150;
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        function createStars() {
+            stars = [];
+            for (let i = 0; i < numStars; i++) stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, radius: Math.random() * 1.5 + 0.5, opacity: Math.random() * 0.5 + 0.2, speed: Math.random() * 0.2 + 0.05, twinkle: Math.random() * 0.015 });
+        }
+        function drawStars() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            stars.forEach(star => {
+                star.opacity += star.twinkle;
+                if (star.opacity > 0.7 || star.opacity < 0.2) star.twinkle = -star.twinkle;
+                star.y -= star.speed;
+                if (star.y < 0) { star.y = canvas.height; star.x = Math.random() * canvas.width; }
+                ctx.beginPath(); ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2); ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`; ctx.fill();
+            });
+            requestAnimationFrame(drawStars);
+        }
+        window.addEventListener('resize', () => { resizeCanvas(); createStars(); });
+        resizeCanvas(); createStars(); drawStars();
     </script>
 </body>
 </html>
