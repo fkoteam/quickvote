@@ -1,184 +1,151 @@
 <?php
-// screen.php - Pantalla de resultados
+// screen.php - Pantalla visual de resultados
 $code = isset($_GET['code']) ? strtoupper($_GET['code']) : '';
-if (!$code) die("Falta el código (?code=XYZ)");
+if (!$code) die("Falta el código. Usa: screen.php?code=TU_CODIGO");
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Pantalla <?= $code ?></title>
+    <title>Resultados: <?= htmlspecialchars($code) ?></title>
     <style>
-        body { 
-            background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; 
-            display: flex; flex-direction: column; height: 100vh; margin: 0; 
-        }
-        #star-bg { position: fixed; top:0; left:0; width:100%; height:100%; z-index:-1; }
+        body { margin: 0; background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
+        #stars-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
         
-        header { 
-            padding: 20px; text-align: center; color: rgba(255,255,255,0.5); 
-            font-size: 1.2em; letter-spacing: 5px; border-bottom: 1px solid rgba(255,255,255,0.1); 
-        }
-
-        #content { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 40px; }
+        header { padding: 20px; text-align: center; font-size: 1.5em; letter-spacing: 5px; color: rgba(255,255,255,0.3); border-bottom: 1px solid rgba(255,255,255,0.1); }
         
-        h1 { 
-            color: #fff; font-size: 3em; text-align: center; margin: 0 0 50px 0; 
-            text-shadow: 0 0 20px #8a2be2; line-height: 1.2;
-        }
-
-        .chart-container { 
-            display: flex; align-items: flex-end; justify-content: center; gap: 40px; 
-            height: 50vh; width: 80%; margin: 0 auto; 
-        }
-
-        .bar-group { 
-            flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end;
-        }
-
-        .bar { 
-            width: 100%; background: linear-gradient(to top, #8a2be2, #00d2ff); 
-            border-radius: 10px 10px 0 0; transition: height 0.5s ease-out; 
-            position: relative; min-height: 5px; box-shadow: 0 0 20px rgba(138, 43, 226, 0.4);
-        }
-
-        .bar-val { 
-            position: absolute; top: -35px; width: 100%; text-align: center; 
-            font-size: 2em; font-weight: bold; color: #fff; 
-        }
-
-        .bar-label { 
-            margin-top: 15px; font-size: 1.5em; color: #ddd; text-align: center; 
-            background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px;
-        }
+        #main-container { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px; }
         
-        .timer-overlay {
-            position: fixed; top: 20px; right: 20px; font-size: 2em; color: #fff;
-            background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 10px;
-            border: 1px solid #333; display: none;
-        }
+        h1 { font-size: 3.5em; text-align: center; margin-bottom: 50px; text-shadow: 0 0 30px #8a2be2; width: 100%; }
+        
+        #idle-msg { font-size: 2em; color: rgba(255,255,255,0.5); animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
-        .idle-msg { text-align: center; color: #555; font-size: 2em; }
+        /* GRÁFICO DE BARRAS */
+        .chart { display: flex; align-items: flex-end; justify-content: center; height: 50vh; width: 90%; gap: 30px; }
+        .bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+        .bar { width: 100%; background: linear-gradient(to top, #4a0080, #8a2be2); border-radius: 10px 10px 0 0; transition: height 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; min-height: 5px; box-shadow: 0 0 30px rgba(138, 43, 226, 0.4); border: 1px solid rgba(255,255,255,0.2); }
+        .bar-value { position: absolute; top: -40px; width: 100%; text-align: center; font-size: 2.5em; font-weight: bold; text-shadow: 0 0 10px rgba(0,0,0,0.8); }
+        .bar-label { margin-top: 20px; font-size: 1.5em; text-align: center; background: rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.2); width: 100%; }
+
+        /* TIMER FLOTANTE */
+        .timer-float { position: fixed; top: 20px; right: 20px; font-size: 2.5em; font-weight: bold; padding: 10px 30px; border-radius: 15px; background: rgba(0,0,0,0.6); border: 2px solid #8a2be2; display: none; }
+        .timer-float.urgent { color: #ff4444; border-color: #ff4444; animation: shake 0.5s infinite; }
+        @keyframes shake { 0% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } 100% { transform: translateX(0); } }
     </style>
 </head>
 <body>
-    <canvas id="star-bg"></canvas>
-    <header>EVENTO: <b><?= $code ?></b></header>
-    <div id="timer-box" class="timer-overlay"></div>
+    <canvas id="stars-canvas"></canvas>
+    <header>EVENTO: <strong><?= $code ?></strong></header>
+    <div id="timerDisplay" class="timer-float"></div>
 
-    <div id="content">
-        <div id="idle" class="idle-msg">Esperando votación...</div>
-        <div id="active" style="display:none; height: 100%;">
-            <h1 id="q-title"></h1>
-            <div id="chart" class="chart-container"></div>
+    <div id="main-container">
+        <div id="idle-msg">Esperando votación...</div>
+        
+        <div id="active-content" style="display:none; width: 100%;">
+            <h1 id="questionTitle"></h1>
+            <div id="chartContainer" class="chart"></div>
         </div>
     </div>
 
     <script>
-        // Animación Fondo
-        const cvs = document.getElementById('star-bg'), ctx = cvs.getContext('2d');
-        let stars = [];
-        const resize = () => { cvs.width = window.innerWidth; cvs.height = window.innerHeight; };
-        window.onresize = resize; resize();
-        for(let i=0; i<200; i++) stars.push({x:Math.random()*cvs.width, y:Math.random()*cvs.height, s:Math.random()*2});
-        function draw(){
-            ctx.clearRect(0,0,cvs.width,cvs.height);
-            ctx.fillStyle='white';
-            stars.forEach(st=>{
-                ctx.globalAlpha = Math.random();
-                ctx.beginPath(); ctx.arc(st.x, st.y, st.s, 0, 6.28); ctx.fill();
-                st.y -= 0.2; if(st.y<0) st.y=cvs.height;
-            });
-            requestAnimationFrame(draw);
-        }
-        draw();
-
-        // Lógica
         const CODE = '<?= $code ?>';
-        let currentQId = 0;
+        let currentQId = null;
 
         function refresh() {
-            // 1. Ver qué pregunta está activa o pedir resultados
             fetch(`api.php?action=check&code=${CODE}`).then(r=>r.json()).then(status => {
-                if(status.active) {
-                    showQuestion(status.question);
-                    currentQId = status.question.id;
-                    fetchResults(); // Traer datos
+                const idleDiv = document.getElementById('idle-msg');
+                const activeDiv = document.getElementById('active-content');
+
+                if (status.question_id) {
+                    // Pregunta Activa
+                    currentQId = status.question_id;
+                    idleDiv.style.display = 'none';
+                    activeDiv.style.display = 'block';
+                    document.getElementById('questionTitle').innerText = status.question_text;
+                    
+                    // Timer
+                    updateTimer(status.timer_total, status.timer_remaining);
+                    
+                    // Cargar Resultados
+                    loadResults(currentQId);
                 } else {
-                    // Si no hay activa, pero tenemos una QId previa, seguimos mostrando los resultados finales
-                    if(currentQId !== 0) {
-                        fetchResults();
+                    // Si no hay activa pero teníamos una cargada, seguimos mostrando resultados (sin timer)
+                    document.getElementById('timerDisplay').style.display = 'none';
+                    if (currentQId) {
+                        loadResults(currentQId);
                     } else {
-                        document.getElementById('idle').style.display = 'block';
-                        document.getElementById('active').style.display = 'none';
+                        idleDiv.style.display = 'block';
+                        activeDiv.style.display = 'none';
                     }
                 }
             });
         }
 
-        function showQuestion(q) {
-            document.getElementById('idle').style.display = 'none';
-            document.getElementById('active').style.display = 'block';
-            document.getElementById('q-title').innerText = q.text;
-            
-            // Timer
-            const tBox = document.getElementById('timer-box');
-            if(q.timer_total > 0 && q.timer_remaining !== null) {
-                tBox.style.display = 'block';
-                tBox.innerText = Math.ceil(q.timer_remaining) + "s";
-                if(q.timer_remaining <= 5) tBox.style.color = '#ff3333';
-                else tBox.style.color = '#fff';
+        function updateTimer(total, remaining) {
+            const tDiv = document.getElementById('timerDisplay');
+            if (total > 0 && remaining !== null) {
+                tDiv.style.display = 'block';
+                tDiv.innerText = Math.ceil(remaining);
+                if (remaining <= 5) tDiv.classList.add('urgent');
+                else tDiv.classList.remove('urgent');
             } else {
-                tBox.style.display = 'none';
+                tDiv.style.display = 'none';
             }
         }
 
-        function fetchResults() {
-            if(!currentQId) return;
-            fetch(`api.php?action=results&code=${CODE}&question_id=${currentQId}`)
-                .then(r=>r.json())
-                .then(d => renderChart(d.results, d.total));
+        function loadResults(qId) {
+            fetch(`api.php?action=results&code=${CODE}&question_id=${qId}`)
+            .then(r=>r.json())
+            .then(data => drawChart(data.results));
         }
 
-        function renderChart(results, total) {
-            const container = document.getElementById('chart');
-            // Si cambia la estructura de opciones, limpiar
-            if(container.children.length !== Object.keys(results).length) {
+        function drawChart(results) {
+            const container = document.getElementById('chartContainer');
+            
+            // Si cambia la estructura de respuestas, reconstruir DOM
+            if (container.children.length !== Object.keys(results).length) {
                 container.innerHTML = '';
-                Object.values(results).forEach(r => {
-                    const g = document.createElement('div'); g.className = 'bar-group';
-                    g.innerHTML = `
-                        <div class="bar" style="height:0%"><div class="bar-val">0</div></div>
-                        <div class="bar-label">${r.text}</div>
+                Object.values(results).forEach(res => {
+                    const group = document.createElement('div');
+                    group.className = 'bar-group';
+                    group.innerHTML = `
+                        <div class="bar" style="height: 0%"><div class="bar-value">0</div></div>
+                        <div class="bar-label">${res.text}</div>
                     `;
-                    container.appendChild(g);
+                    container.appendChild(group);
                 });
             }
 
             // Actualizar alturas
             const groups = container.children;
-            let i = 0;
-            // Calcular máximo para escalar (si total es 0, evitar division por 0)
-            // Para visualización, usamos % sobre total, o sobre el máximo votado? 
-            // Mejor sobre total para ver participación, o sobre max para llenar pantalla.
-            // Usaremos sobre Max Count para que siempre se vea alguna barra alta.
-            let maxCount = 0;
-            Object.values(results).forEach(r => maxCount = Math.max(maxCount, r.count));
-            if(maxCount === 0) maxCount = 1;
+            let maxVal = 0;
+            Object.values(results).forEach(r => { if(r.count > maxVal) maxVal = r.count; });
+            if (maxVal === 0) maxVal = 1; // Evitar div/0
 
-            Object.values(results).forEach(r => {
-                const height = (r.count / maxCount) * 80; // max 80% height
+            let i = 0;
+            Object.values(results).forEach(res => {
                 const bar = groups[i].querySelector('.bar');
-                const val = groups[i].querySelector('.bar-val');
+                const val = groups[i].querySelector('.bar-value');
                 
-                bar.style.height = height + '%';
-                val.innerText = r.count; // Mostrar número absoluto
+                // Altura relativa al máximo valor (para que siempre haya una barra alta)
+                const heightPct = (res.count / maxVal) * 80; 
+                bar.style.height = Math.max(heightPct, 1) + '%'; // Mínimo 1% para que se vea la base
+                val.innerText = res.count;
                 i++;
             });
         }
 
         setInterval(refresh, 1000);
-        refresh();
+        
+        // ESTRELLAS (Mismo script)
+        const cvs = document.getElementById('stars-canvas'), ctx = cvs.getContext('2d');
+        let stars = [];
+        const resize = () => { cvs.width = window.innerWidth; cvs.height = window.innerHeight; };
+        window.onresize = resize; resize();
+        for(let i=0;i<200;i++) stars.push({x:Math.random()*cvs.width,y:Math.random()*cvs.height,s:Math.random()*2});
+        function draw(){ ctx.clearRect(0,0,cvs.width,cvs.height); stars.forEach(st=>{ ctx.globalAlpha=Math.random(); ctx.beginPath(); ctx.arc(st.x,st.y,st.s,0,6.28); ctx.fillStyle='white'; ctx.fill(); st.y-=0.2; if(st.y<0)st.y=cvs.height; }); requestAnimationFrame(draw); }
+        draw();
     </script>
 </body>
 </html>
