@@ -141,94 +141,118 @@ $participantId = $_SESSION['participant_id'];
             line-height: 1.4;
             text-shadow: 0 0 30px rgba(138, 43, 226, 0.3);
         }
+/* Timer Container - Estilo Base */
+.timer-container {
+    margin-bottom: 40px; /* Más aire alrededor */
+    opacity: 0;
+    transition: opacity 0.6s ease; /* Transición más suave y lenta */
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Fuente limpia */
+}
 
-        /* Timer bar */
-        .timer-container {
-            margin-bottom: 30px;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
+.timer-container.visible {
+    opacity: 1;
+}
 
-        .timer-container.visible {
-            opacity: 1;
-        }
+/* Información (Texto) */
+.timer-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end; /* Alineado abajo para elegancia */
+    margin-bottom: 12px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.85em;
+    letter-spacing: 2px; /* Espaciado "premium" */
+    text-transform: uppercase;
+}
 
-        .timer-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 0.9em;
-        }
+.timer-label {
+    font-weight: 300; /* Letra fina */
+    opacity: 0.7;
+}
 
-        .timer-label {
-            font-weight: 600;
-        }
+.timer-value {
+    font-size: 1.4em;
+    font-weight: 300;
+    font-variant-numeric: tabular-nums; /* Evita que los números bailen */
+    color: #ffffff;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3); /* Brillo sutil */
+    transition: color 0.5s ease;
+}
 
-        .timer-value {
-            font-size: 1.2em;
-            font-weight: 700;
-            color: #96c93d;
-        }
+/* Estados del texto (Sobrios) */
+.timer-value.warning {
+    color: rgba(255, 255, 255, 0.8);
+}
 
-        .timer-value.warning {
-            color: #f5af19;
-            animation: pulse 1s ease infinite;
-        }
+.timer-value.danger {
+    color: rgba(255, 255, 255, 0.6);
+    animation: breathe 2s ease-in-out infinite; /* Animación lenta */
+}
 
-        .timer-value.danger {
-            color: #f45c43;
-            animation: pulse 0.5s ease infinite;
-        }
+/* Contenedor de la barra (El "Raíl") */
+.timer-bar-container {
+    width: 100%;
+    height: 6px; /* Mucho más fina y elegante */
+    background: rgba(255, 255, 255, 0.1); /* Transparencia sutil */
+    border-radius: 4px;
+    overflow: visible; /* Visible para que se vea el brillo exterior */
+    border: none; /* Sin bordes duros */
+    /* Efecto cristal (opcional, depende del navegador) */
+    backdrop-filter: blur(5px); 
+    -webkit-backdrop-filter: blur(5px);
+}
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
+/* La Barra de Progreso */
+.timer-bar {
+    height: 100%;
+    background: #ffffff; /* Blanco puro */
+    border-radius: 4px;
+    transition: width 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Movimiento fluido */
+    position: relative;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.4); /* Resplandor elegante */
+}
 
-        .timer-bar-container {
-            width: 100%;
-            height: 20px;
-            background: rgba(0, 0, 0, 0.5);
-            border-radius: 15px;
-            overflow: hidden;
-            border: 1px solid rgba(138, 43, 226, 0.3);
-            position: relative;
-        }
+/* Eliminamos el shimmer barato y usamos un brillo sutil en la punta */
+.timer-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 100px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+    opacity: 0.5;
+    transform: translateX(50%); /* Se mantiene en la punta derecha */
+}
 
-        .timer-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #00b09b 0%, #96c93d 100%);
-            border-radius: 15px;
-            transition: width 0.3s linear, background 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
+/* Estados de la barra (Monocromáticos) */
 
-        .timer-bar::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-            animation: shimmer 2s infinite;
-        }
+/* Warning: La barra se vuelve ligeramente translúcida */
+.timer-bar.warning {
+    background: rgba(255, 255, 255, 0.7);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
 
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
+/* Danger: La barra parpadea lentamente ("respiración") y se atenúa */
+.timer-bar.danger {
+    background: rgba(255, 255, 255, 0.5);
+    box-shadow: none;
+    animation: breathe-bar 2s infinite;
+}
 
-        .timer-bar.warning {
-            background: linear-gradient(90deg, #f5af19 0%, #f12711 100%);
-        }
+/* Animaciones refinadas */
 
-        .timer-bar.danger {
-            background: linear-gradient(90deg, #eb3349 0%, #f45c43 100%);
-        }
+/* Respiración para el texto */
+@keyframes breathe {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Respiración para la barra (más sutil) */
+@keyframes breathe-bar {
+    0%, 100% { opacity: 1; box-shadow: 0 0 5px rgba(255,255,255,0.1); }
+    50% { opacity: 0.3; box-shadow: 0 0 0 rgba(255,255,255,0); }
+}
 
         /* Botones dinámicos */
         .buttons {
@@ -399,7 +423,7 @@ $participantId = $_SESSION['participant_id'];
         
         <div id="status">
             <div class="loader"></div>
-            <div class="waiting-text">Esperando pregunta...</div>
+            <div class="waiting-text">Esperando, esta pantalla se actualizará automáticamente...</div>
         </div>
         
         <div id="questionBox" class="question-box">
@@ -407,7 +431,7 @@ $participantId = $_SESSION['participant_id'];
             
             <div class="timer-container" id="timerContainer">
                 <div class="timer-info">
-                    <span class="timer-label">⏱️ Tiempo restante:</span>
+                    <span class="timer-label"><!--⏱️ Tiempo restante:--></span>
                     <span class="timer-value" id="timerValue">--</span>
                 </div>
                 <div class="timer-bar-container">
