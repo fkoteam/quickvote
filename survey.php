@@ -513,7 +513,7 @@ $participantId = $_SESSION['participant_id'];
             timerContainer.classList.add('visible');
             
             timerInterval = setInterval(() => {
-                remainingSeconds=remainingSeconds-50;
+                remainingSeconds=remainingSeconds-0.050;
                 
                 if (remainingSeconds <= 0) {
                     stopTimer();
