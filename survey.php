@@ -195,7 +195,8 @@ $participantId = $_SESSION['participant_id'];
     height: 6px; /* Mucho más fina y elegante */
     background: rgba(255, 255, 255, 0.1); /* Transparencia sutil */
     border-radius: 4px;
-    overflow: visible; /* Visible para que se vea el brillo exterior */
+    /* overflow: visible; Visible para que se vea el brillo exterior */
+    overflow: hidden; 
     border: none; /* Sin bordes duros */
     /* Efecto cristal (opcional, depende del navegador) */
     backdrop-filter: blur(5px); 
@@ -512,7 +513,7 @@ $participantId = $_SESSION['participant_id'];
             timerContainer.classList.add('visible');
             
             timerInterval = setInterval(() => {
-                remainingSeconds--;
+                remainingSeconds=remainingSeconds-50;
                 
                 if (remainingSeconds <= 0) {
                     stopTimer();
@@ -522,7 +523,7 @@ $participantId = $_SESSION['participant_id'];
                 }
                 
                 updateTimerDisplay();
-            }, 100);
+            }, 50);
             
             updateTimerDisplay();
         }
@@ -531,7 +532,7 @@ $participantId = $_SESSION['participant_id'];
             const timerValue = document.getElementById('timerValue');
             const timerBar = document.getElementById('timerBar');
             
-            timerValue.textContent = remainingSeconds + 's';
+            timerValue.textContent = Math.ceil(remainingSeconds) + 's';
             
             const percentage = (remainingSeconds / totalSeconds) * 100;
             timerBar.style.width = percentage + '%';
