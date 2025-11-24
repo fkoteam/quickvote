@@ -1,5 +1,5 @@
 <?php
-// admin.php - Panel de administración
+// admin.php - Panel de administración actualizado
 session_start();
 require_once 'db.php';
 
@@ -13,18 +13,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if ($action === 'create_question') {
         $text = trim($_POST['question_text'] ?? '');
-        $timer = intval($_POST['timer_seconds'] ?? 0);
-        $options = $_POST['options'] ?? [];
+        $numOptions = intval($_POST['num_options'] ?? 2);
+        $numOptions = max(2, min(10, $numOptions)); // Entre 2 y 10
         
-        // Filtrar opciones vacías
-        $options = array_filter($options, function($val) { return trim($val) !== ''; });
-
-        if ($text && count($options) >= 2) {
-            $db->createQuestion($text, $options, $timer);
+        $optionLabels = [];
+        for ($i = 1; $i <= $numOptions; $i++) {
+            $label = trim($_POST["option_$i"] ?? "Opción $i");
+            $optionLabels[] = $label;
+        }
+        
+        $autoClose = isset($_POST['auto_close']) ? 1 : 0;
+        $closeSeconds = intval($_POST['close_seconds'] ?? 30);
+        $closeSeconds = max(5, min(300, $closeSeconds)); // Entre 5 y 300 segundos
+        
+        if ($text) {
+            $db->createQuestion($text, $numOptions, json_encode($optionLabels), $autoClose, $closeSeconds);
             $message = 'Pregunta creada exitosamente';
-        } else {
-            $message = 'Error: Debes escribir la pregunta y al menos 2 opciones.';
-            $messageType = 'error';
+        }
+    } elseif ($action === 'update_question') {
+        $id = $_POST['question_id'] ?? 0;
+        $text = trim($_POST['question_text'] ?? '');
+        $numOptions = intval($_POST['num_options'] ?? 2);
+        $numOptions = max(2, min(10, $numOptions));
+        
+        $optionLabels = [];
+        for ($i = 1; $i <= $numOptions; $i++) {
+            $label = trim($_POST["option_$i"] ?? "Opción $i");
+            $optionLabels[] = $label;
+        }
+        
+        $autoClose = isset($_POST['auto_close']) ? 1 : 0;
+        $closeSeconds = intval($_POST['close_seconds'] ?? 30);
+        $closeSeconds = max(5, min(300, $closeSeconds));
+        
+        if ($id && $text) {
+            $db->updateQuestion($id, $text, $numOptions, json_encode($optionLabels), $autoClose, $closeSeconds);
+            $message = 'Pregunta actualizada';
         }
     } elseif ($action === 'delete_question') {
         $id = $_POST['question_id'] ?? 0;
@@ -75,68 +99,420 @@ $instances = $db->getSurveyInstances();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Administración</title>
     <style>
-        /* ESTILOS ORIGINALES CONSERVADOS */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0a0a0f; padding: 20px; min-height: 100vh; color: #fff; }
-        .header { background: linear-gradient(135deg, rgba(138, 43, 226, 0.3) 0%, rgba(74, 0, 128, 0.3) 100%); border: 1px solid rgba(138, 43, 226, 0.5); color: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; }
-        .header h1 { font-size: 2.5em; margin-bottom: 10px; text-shadow: 0 0 30px rgba(138, 43, 226, 0.5); }
-        .header a { color: rgba(255, 255, 255, 0.7); text-decoration: none; transition: color 0.3s; }
-        .header a:hover { color: #fff; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .message { background: linear-gradient(135deg, rgba(0, 176, 155, 0.2) 0%, rgba(150, 201, 61, 0.2) 100%); border: 1px solid rgba(0, 176, 155, 0.5); color: #96c93d; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; }
-        .message.error { background: linear-gradient(135deg, rgba(235, 51, 73, 0.2) 0%, rgba(244, 92, 67, 0.2) 100%); border: 1px solid rgba(235, 51, 73, 0.5); color: #f45c43; }
-        .section { background: rgba(20, 20, 30, 0.9); padding: 30px; border-radius: 15px; margin-bottom: 30px; border: 1px solid rgba(138, 43, 226, 0.2); }
-        .section h2 { color: #fff; margin-bottom: 25px; font-size: 1.8em; border-bottom: 2px solid rgba(138, 43, 226, 0.5); padding-bottom: 10px; }
-        .form-group { margin-bottom: 20px; }
-        .form-row { display: flex; gap: 15px; }
-        .form-row .form-group { flex: 1; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
-        input[type="text"], input[type="number"], textarea, select { width: 100%; padding: 12px 15px; border: 2px solid rgba(138, 43, 226, 0.3); border-radius: 8px; font-size: 1em; transition: all 0.3s; background: rgba(0, 0, 0, 0.5); color: #fff; }
-        input:focus, textarea:focus, select:focus { outline: none; border-color: #8a2be2; box-shadow: 0 0 15px rgba(138, 43, 226, 0.3); }
-        textarea { min-height: 80px; resize: vertical; font-family: inherit; }
-        .btn { padding: 12px 25px; border: none; border-radius: 8px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.5px; }
-        .btn-primary { background: linear-gradient(135deg, #8a2be2 0%, #4a0080 100%); color: white; }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(138, 43, 226, 0.5); }
-        .btn-danger { background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); color: white; padding: 8px 15px; font-size: 0.9em; }
-        .btn-warning { background: linear-gradient(135deg, #f5af19 0%, #f12711 100%); color: white; padding: 8px 15px; font-size: 0.9em; }
-        .btn-secondary { background: #444; color: #fff; padding: 5px 10px; font-size: 0.8em; margin-left: 5px; }
-        .question-item, .instance-item { background: rgba(0, 0, 0, 0.3); padding: 20px; border-radius: 10px; margin-bottom: 15px; border: 1px solid rgba(138, 43, 226, 0.2); transition: all 0.2s; }
-        .question-item:hover, .instance-item:hover { border-color: rgba(138, 43, 226, 0.5); box-shadow: 0 0 20px rgba(138, 43, 226, 0.2); }
-        .question-header, .instance-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px; }
-        .question-text { flex: 1; font-size: 1.1em; color: #fff; }
-        .question-text strong { color: #8a2be2; }
-        .question-labels { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
-        .label-tag { padding: 5px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600; background: rgba(0, 176, 155, 0.2); border: 1px solid rgba(0, 176, 155, 0.5); color: #96c93d; }
-        .label-timer { background: rgba(245, 175, 25, 0.2); border: 1px solid rgba(245, 175, 25, 0.5); color: #f5af19; }
-        .instance-code { font-size: 1.5em; font-weight: 700; color: #8a2be2; letter-spacing: 3px; text-shadow: 0 0 20px rgba(138, 43, 226, 0.5); }
-        .api-section { background: rgba(0, 0, 0, 0.3); padding: 20px; border-radius: 10px; margin-top: 20px; border: 1px solid rgba(138, 43, 226, 0.2); }
-        .api-section h3 { color: #8a2be2; margin-bottom: 10px; margin-top: 15px; }
-        .api-endpoint { background: #000; color: #96c93d; padding: 12px 15px; border-radius: 6px; font-family: 'Courier New', monospace; margin-bottom: 10px; overflow-x: auto; border: 1px solid rgba(150, 201, 61, 0.3); }
-        .api-buttons { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-        .instance-select { padding: 8px 12px; border-radius: 6px; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(138, 43, 226, 0.5); color: #fff; font-size: 0.9em; width: auto; }
-        .btn-go { background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%); color: white; padding: 8px 15px; font-size: 0.9em; }
-        .btn-off { background: linear-gradient(135deg, #606060 0%, #404040 100%); color: white; padding: 8px 15px; font-size: 0.9em; }
-        .btn-results { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 15px; font-size: 0.9em; }
-        .option-input-row { display: flex; gap: 10px; margin-bottom: 10px; }
-        .screen-btn { background: #3498db; color:white; border:none; padding: 5px 10px; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 0.8em; margin-left: 10px;}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a0f;
+            padding: 20px;
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .header {
+            background: linear-gradient(135deg, rgba(138, 43, 226, 0.3) 0%, rgba(74, 0, 128, 0.3) 100%);
+            border: 1px solid rgba(138, 43, 226, 0.5);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 0 30px rgba(138, 43, 226, 0.5);
+        }
+
+        .header a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .header a:hover {
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .message {
+            background: linear-gradient(135deg, rgba(0, 176, 155, 0.2) 0%, rgba(150, 201, 61, 0.2) 100%);
+            border: 1px solid rgba(0, 176, 155, 0.5);
+            color: #96c93d;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .message.error {
+            background: linear-gradient(135deg, rgba(235, 51, 73, 0.2) 0%, rgba(244, 92, 67, 0.2) 100%);
+            border: 1px solid rgba(235, 51, 73, 0.5);
+            color: #f45c43;
+        }
+
+        .section {
+            background: rgba(20, 20, 30, 0.9);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(138, 43, 226, 0.2);
+        }
+
+        .section h2 {
+            color: #fff;
+            margin-bottom: 25px;
+            font-size: 1.8em;
+            border-bottom: 2px solid rgba(138, 43, 226, 0.5);
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid rgba(138, 43, 226, 0.3);
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s;
+            background: rgba(0, 0, 0, 0.5);
+            color: #fff;
+        }
+
+        input[type="text"]::placeholder,
+        input[type="number"]::placeholder,
+        textarea::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #8a2be2;
+            box-shadow: 0 0 15px rgba(138, 43, 226, 0.3);
+        }
+
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            border: 1px solid rgba(138, 43, 226, 0.2);
+        }
+
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .options-container {
+            border: 1px solid rgba(138, 43, 226, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .option-input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .option-number {
+            min-width: 40px;
+            text-align: center;
+            font-weight: 700;
+            color: #8a2be2;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #8a2be2 0%, #4a0080 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(138, 43, 226, 0.5);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+            color: white;
+            padding: 8px 15px;
+            font-size: 0.9em;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f5af19 0%, #f12711 100%);
+            color: white;
+            padding: 8px 15px;
+            font-size: 0.9em;
+        }
+
+        .btn-edit {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 8px 15px;
+            font-size: 0.9em;
+            margin-right: 10px;
+        }
+
+        .btn-go {
+            background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%);
+            color: white;
+            padding: 8px 15px;
+            font-size: 0.9em;
+        }
+
+        .btn-off {
+            background: linear-gradient(135deg, #606060 0%, #404040 100%);
+            color: white;
+            padding: 8px 15px;
+            font-size: 0.9em;
+        }
+
+        .btn-results {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 15px;
+            font-size: 0.9em;
+        }
+
+        .question-list,
+        .instance-list {
+            margin-top: 25px;
+        }
+
+        .question-item,
+        .instance-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(138, 43, 226, 0.2);
+            transition: all 0.2s;
+        }
+
+        .question-item:hover,
+        .instance-item:hover {
+            border-color: rgba(138, 43, 226, 0.5);
+            box-shadow: 0 0 20px rgba(138, 43, 226, 0.2);
+        }
+
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .question-text {
+            flex: 1;
+            font-size: 1.1em;
+            color: #fff;
+        }
+
+        .question-text strong {
+            color: #8a2be2;
+        }
+
+        .question-labels {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .label-tag {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            background: rgba(138, 43, 226, 0.2);
+            border: 1px solid rgba(138, 43, 226, 0.5);
+            color: #8a2be2;
+        }
+
+        .auto-close-badge {
+            background: rgba(245, 175, 25, 0.2);
+            border: 1px solid rgba(245, 175, 25, 0.5);
+            color: #f5af19;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            margin-top: 5px;
+            display: inline-block;
+        }
+
+        .question-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .api-buttons {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .instance-select {
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(138, 43, 226, 0.5);
+            color: #fff;
+            font-size: 0.9em;
+        }
+
+        .instance-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .instance-code {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #8a2be2;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px rgba(138, 43, 226, 0.5);
+        }
+
+        .instance-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: rgba(20, 20, 30, 0.98);
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 700px;
+            width: 90%;
+            border: 1px solid rgba(138, 43, 226, 0.5);
+            box-shadow: 0 0 60px rgba(138, 43, 226, 0.3);
+            max-height: 90vh;
+            overflow-y: auto;
+            margin: 20px;
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            color: #fff;
+        }
+
+        .modal-footer {
+            margin-top: 25px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        small {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        #optionsCountDisplay {
+            color: #8a2be2;
+            font-weight: 700;
+            font-size: 1.2em;
+        }
+
+        @media (max-width: 768px) {
+            .question-header,
+            .instance-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .form-row {
+                flex-direction: column;
+            }
+        }
     </style>
-    <script>
-    function openApi(action, code, questionId) {
-        const url = `api.php?action=${action}&code=${code}&question_id=${questionId}`;
-        window.open(url, '_blank');
-    }
-    
-    function addOption() {
-        const container = document.getElementById('options-container');
-        const div = document.createElement('div');
-        div.className = 'option-input-row';
-        div.innerHTML = `
-            <input type="text" name="options[]" placeholder="Opción de respuesta" required>
-            <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()" style="padding: 0 15px;">X</button>
-        `;
-        container.appendChild(div);
-    }
-    </script>
 </head>
 <body>
     <div class="container">
@@ -151,7 +527,7 @@ $instances = $db->getSurveyInstances();
             </div>
         <?php endif; ?>
 
-        <!-- Crear instancia -->
+<!-- Instancias -->
         <div class="section">
             <h2>📊 Instancias de Encuesta</h2>
             <form method="POST">
@@ -170,17 +546,16 @@ $instances = $db->getSurveyInstances();
                         <div class="instance-header">
                             <div>
                                 <span class="instance-code"><?php echo htmlspecialchars($instance['code']); ?></span>
-                                <a href="screen.php?code=<?php echo $instance['code']; ?>" target="_blank" class="screen-btn">📺 Abrir Pantalla Visual</a>
                                 <br>
                                 <small>Creado: <?php echo $instance['created_at']; ?></small>
                             </div>
                             <div class="instance-actions">
-                                <form method="POST" style="display: inline;" onsubmit="return confirm('¿Reiniciar TODAS las respuestas de esta instancia?');">
+                                <form method="POST" style="display: inline;" onsubmit="return confirm('¿Reiniciar TODAS las respuestas?');">
                                     <input type="hidden" name="action" value="reset_all_answers">
                                     <input type="hidden" name="code" value="<?php echo $instance['code']; ?>">
-                                    <button type="submit" class="btn btn-warning">🔄 Reset Respuestas</button>
+                                    <button type="submit" class="btn btn-warning">🔄 Reset</button>
                                 </form>
-                                <form method="POST" style="display: inline;" onsubmit="return confirm('¿Eliminar esta instancia y todas sus respuestas?');">
+                                <form method="POST" style="display: inline;" onsubmit="return confirm('¿Eliminar esta instancia?');">
                                     <input type="hidden" name="action" value="delete_instance">
                                     <input type="hidden" name="code" value="<?php echo $instance['code']; ?>">
                                     <button type="submit" class="btn btn-danger">🗑️ Eliminar</button>
@@ -192,29 +567,43 @@ $instances = $db->getSurveyInstances();
             </div>
         </div>
 
-        <!-- Gestión de preguntas (MODIFICADO PARA MULTI-OPCIÓN) -->
+        <!-- Gestión de Preguntas -->
         <div class="section">
             <h2>❓ Gestión de Preguntas</h2>
-            <form method="POST">
+            <form method="POST" id="createQuestionForm">
                 <input type="hidden" name="action" value="create_question">
+                
                 <div class="form-group">
                     <label>Texto de la pregunta:</label>
                     <textarea name="question_text" required placeholder="Escribe tu pregunta aquí..."></textarea>
                 </div>
-                
-                <div class="form-group">
-                    <label>⏱️ Tiempo límite (segundos):</label>
-                    <input type="number" name="timer_seconds" value="0" min="0" placeholder="0 = Manual (sin límite automático)">
-                    <small>Si pones 0, el apagado será manual.</small>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Número de opciones: <span id="optionsCountDisplay">2</span></label>
+                        <input type="range" name="num_options" id="numOptions" min="2" max="10" value="2" 
+                               style="width: 100%;" oninput="updateOptionsInputs(this.value)">
+                    </div>
                 </div>
 
                 <div class="form-group">
-                    <label>Opciones de Respuesta:</label>
-                    <div id="options-container">
-                        <div class="option-input-row"><input type="text" name="options[]" value="SÍ" required></div>
-                        <div class="option-input-row"><input type="text" name="options[]" value="NO" required></div>
+                    <label>Etiquetas de las opciones:</label>
+                    <div class="options-container" id="optionsContainer">
+                        <!-- Se genera dinámicamente -->
                     </div>
-                    <button type="button" class="btn btn-secondary" onclick="addOption()">+ Añadir Opción</button>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" name="auto_close" id="autoClose" onchange="toggleAutoClose()">
+                            <label for="autoClose" style="margin: 0;">Cierre automático</label>
+                        </div>
+                    </div>
+                    <div class="form-group" id="closeSecondsGroup" style="display: none;">
+                        <label>Segundos para cerrar:</label>
+                        <input type="number" name="close_seconds" min="5" max="300" value="30" placeholder="30">
+                    </div>
                 </div>
 
                 <button type="submit" class="btn btn-primary">Agregar Pregunta</button>
@@ -222,24 +611,26 @@ $instances = $db->getSurveyInstances();
 
             <div class="question-list">
                 <h3 style="color: rgba(255,255,255,0.7); margin: 20px 0 15px;">Preguntas Existentes:</h3>
-                <?php foreach ($questions as $question): ?>
+                <?php foreach ($questions as $question): 
+                    $labels = json_decode($question['option_labels'], true);
+                ?>
                     <div class="question-item">
                         <div class="question-header">
                             <div class="question-text">
                                 <strong>ID <?php echo $question['id']; ?>:</strong> 
                                 <?php echo htmlspecialchars($question['text']); ?>
-                                
                                 <div class="question-labels">
-                                    <?php if($question['timer_seconds'] > 0): ?>
-                                        <span class="label-tag label-timer">⏱️ <?php echo $question['timer_seconds']; ?>s</span>
-                                    <?php else: ?>
-                                        <span class="label-tag label-timer">Manual</span>
-                                    <?php endif; ?>
-                                    
-                                    <?php foreach($question['options'] as $opt): ?>
-                                        <span class="label-tag"><?php echo htmlspecialchars($opt['text']); ?></span>
+                                    <?php foreach ($labels as $label): ?>
+                                        <span class="label-tag"><?php echo htmlspecialchars($label); ?></span>
                                     <?php endforeach; ?>
                                 </div>
+                                <?php if ($question['auto_close']): ?>
+                                    <div>
+                                        <span class="auto-close-badge">
+                                            ⏱️ Auto-cierre: <?php echo $question['close_seconds']; ?>s
+                                        </span>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                             <div class="question-actions">
                                 <div class="api-buttons">
@@ -250,9 +641,10 @@ $instances = $db->getSurveyInstances();
                                     </select>
                                     <button class="btn btn-go" onclick="openApi('go', document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">▶ GO</button>
                                     <button class="btn btn-off" onclick="openApi('off', document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">⏹ OFF</button>
-                                    <button class="btn btn-results" onclick="openApi('results', document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">Results</button>
+                                    <button class="btn btn-results" onclick="openResults(document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">📊 Resultados</button>
                                 </div>
                                 <div style="margin-top: 10px;">
+                                    <button class="btn btn-edit" onclick='editQuestion(<?php echo json_encode($question); ?>)'>✏️ Editar</button>
                                     <form method="POST" style="display: inline;" onsubmit="return confirm('¿Eliminar esta pregunta?');">
                                         <input type="hidden" name="action" value="delete_question">
                                         <input type="hidden" name="question_id" value="<?php echo $question['id']; ?>">
@@ -265,24 +657,147 @@ $instances = $db->getSurveyInstances();
                 <?php endforeach; ?>
             </div>
         </div>
+    </div>
 
-        <!-- Documentación de API (CONSERVADA) -->
-        <div class="section">
-            <h2>🔌 Control de Preguntas por API</h2>
-            <div class="api-section">
-                <h3>Activar pregunta:</h3>
-                <div class="api-endpoint">GET /api.php?action=go&code=CODIGO&question_id=ID</div>
+    <!-- Modal para editar -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">✏️ Editar Pregunta</div>
+            <form method="POST" id="editQuestionForm">
+                <input type="hidden" name="action" value="update_question">
+                <input type="hidden" name="question_id" id="edit_question_id">
                 
-                <h3>Desactivar pregunta:</h3>
-                <div class="api-endpoint">GET /api.php?action=off&code=CODIGO&question_id=ID</div>
-                
-                <h3>Ver resultados:</h3>
-                <div class="api-endpoint">GET /api.php?action=results&code=CODIGO&question_id=ID</div>
+                <div class="form-group">
+                    <label>Texto de la pregunta:</label>
+                    <textarea name="question_text" id="edit_question_text" required></textarea>
+                </div>
 
-                <h3>Reiniciar respuestas:</h3>
-                <div class="api-endpoint">GET /api.php?action=reset&code=CODIGO&question_id=ID</div>
-            </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Número de opciones: <span id="editOptionsCountDisplay">2</span></label>
+                        <input type="range" name="num_options" id="editNumOptions" min="2" max="10" value="2" 
+                               style="width: 100%;" oninput="updateEditOptionsInputs(this.value)">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Etiquetas de las opciones:</label>
+                    <div class="options-container" id="editOptionsContainer"></div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" name="auto_close" id="editAutoClose" onchange="toggleEditAutoClose()">
+                            <label for="editAutoClose" style="margin: 0;">Cierre automático</label>
+                        </div>
+                    </div>
+                    <div class="form-group" id="editCloseSecondsGroup" style="display: none;">
+                        <label>Segundos para cerrar:</label>
+                        <input type="number" name="close_seconds" id="editCloseSeconds" min="5" max="300" value="30">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
         </div>
     </div>
+
+    <script>
+        function openApi(action, code, questionId) {
+            const url = `api.php?action=${action}&code=${code}&question_id=${questionId}`;
+            window.open(url, '_blank');
+        }
+
+        function openResults(code, questionId) {
+            const url = `results.php?code=${code}&question_id=${questionId}`;
+            window.open(url, '_blank');
+        }
+
+        function updateOptionsInputs(num) {
+            document.getElementById('optionsCountDisplay').textContent = num;
+            const container = document.getElementById('optionsContainer');
+            container.innerHTML = '';
+            
+            for (let i = 1; i <= num; i++) {
+                const div = document.createElement('div');
+                div.className = 'option-input-group';
+                div.innerHTML = `
+                    <span class="option-number">${i}</span>
+                    <input type="text" name="option_${i}" placeholder="Opción ${i}" required>
+                `;
+                container.appendChild(div);
+            }
+        }
+
+        function updateEditOptionsInputs(num) {
+            document.getElementById('editOptionsCountDisplay').textContent = num;
+            const container = document.getElementById('editOptionsContainer');
+            const currentLabels = [];
+            
+            // Guardar valores actuales
+            container.querySelectorAll('input').forEach(input => {
+                currentLabels.push(input.value);
+            });
+            
+            container.innerHTML = '';
+            
+            for (let i = 1; i <= num; i++) {
+                const div = document.createElement('div');
+                div.className = 'option-input-group';
+                const value = currentLabels[i-1] || `Opción ${i}`;
+                div.innerHTML = `
+                    <span class="option-number">${i}</span>
+                    <input type="text" name="option_${i}" placeholder="Opción ${i}" value="${value}" required>
+                `;
+                container.appendChild(div);
+            }
+        }
+
+        function toggleAutoClose() {
+            const checked = document.getElementById('autoClose').checked;
+            document.getElementById('closeSecondsGroup').style.display = checked ? 'block' : 'none';
+        }
+
+        function toggleEditAutoClose() {
+            const checked = document.getElementById('editAutoClose').checked;
+            document.getElementById('editCloseSecondsGroup').style.display = checked ? 'block' : 'none';
+        }
+
+        function editQuestion(question) {
+            document.getElementById('edit_question_id').value = question.id;
+            document.getElementById('edit_question_text').value = question.text;
+            document.getElementById('editNumOptions').value = question.num_options;
+            document.getElementById('editAutoClose').checked = question.auto_close == 1;
+            document.getElementById('editCloseSeconds').value = question.close_seconds;
+            
+            toggleEditAutoClose();
+            
+            const labels = JSON.parse(question.option_labels);
+            updateEditOptionsInputs(question.num_options);
+            
+            // Llenar los valores
+            labels.forEach((label, index) => {
+                const input = document.querySelector(`#editOptionsContainer input[name="option_${index+1}"]`);
+                if (input) input.value = label;
+            });
+            
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('editModal').classList.remove('active');
+        }
+
+        document.getElementById('editModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        // Inicializar formulario de creación
+        updateOptionsInputs(2);
+    </script>
 </body>
 </html>
