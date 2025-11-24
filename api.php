@@ -1,255 +1,102 @@
 <?php
-// api.php - API REST para control de preguntas y respuestas
+// api.php
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
 require_once 'db.php';
-
 $db = new Database();
+
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
+$code = strtoupper($_GET['code'] ?? $_POST['code'] ?? '');
+$qId = intval($_GET['question_id'] ?? $_POST['question_id'] ?? 0);
 
-// Respuesta por defecto
-$response = ['success' => false, 'message' => 'Acción no válida'];
-$respuesta_simple = "";
+$response = ['success' => false];
 
-switch ($action) {
+switch($action) {
     case 'go':
-        // Activar pregunta
-        $code = strtoupper($_GET['code'] ?? '');
-        $questionId = intval($_GET['question_id'] ?? 0);
-        
-        if ($code && $questionId) {
-            // Desactivar todas las preguntas anteriores
-            $allQuestions = $db->getQuestions();
-            foreach ($allQuestions as $q) {
-                $db->setQuestionStatus($code, $q['id'], 'off');
-            }
+        if ($code && $qId) {
+            // Apagar cualquier otra pregunta activa
+            $current = $db->getCurrentStatus($code);
+            if ($current) $db->setQuestionStatus($code, $current['question_id'], 'off');
             
-            // Activar la pregunta solicitada
-            $db->setQuestionStatus($code, $questionId, 'on');
-            
-            $question = $db->getQuestion($questionId);
-            
-            $response = [
-                'success' => true,
-                'message' => 'Pregunta activada',
-                'code' => $code,
-                'question_id' => $questionId,
-                'question_text' => $question['text'] ?? '',
-                'yes_text' => $question['yes_text'] ?? 'SÍ',
-                'no_text' => $question['no_text'] ?? 'NO'
-            ];
+            // Activar la nueva
+            $db->setQuestionStatus($code, $qId, 'on');
+            $response = ['success' => true, 'message' => 'Pregunta Activada'];
         }
         break;
-    
+
     case 'off':
-        // Desactivar pregunta
-        $code = strtoupper($_GET['code'] ?? '');
-        $questionId = intval($_GET['question_id'] ?? 0);
-        
-        if ($code && $questionId) {
-            $db->setQuestionStatus($code, $questionId, 'off');
-            
-            $response = [
-                'success' => true,
-                'message' => 'Pregunta desactivada',
-                'code' => $code,
-                'question_id' => $questionId
-            ];
-        }
-        break;
-    
-    case 'results':
-        // Obtener resultados de una pregunta
-        $code = strtoupper($_GET['code'] ?? '');
-        $questionId = intval($_GET['question_id'] ?? 0);
-        
-        if ($code && $questionId) {
-            $results = $db->getResults($code, $questionId);
-            $question = $db->getQuestion($questionId);
-            $total = $results['yes'] + $results['no'];
-            
-            $winner = 'empate';
-            $winnerText = 'Empate';
-            if ($results['yes'] > $results['no']) { 
-                $winner = 'yes';
-                $winnerText = $question['yes_text'] ?? 'SÍ';
-            } elseif ($results['no'] > $results['yes']) {
-                $winner = 'no';
-                $winnerText = $question['no_text'] ?? 'NO';
-            }
-            
-            $response = [
-                'success' => true,
-                'code' => $code,
-                'question_id' => $questionId,
-                'question_text' => $question['text'] ?? '',
-                'labels' => [
-                    'yes' => $question['yes_text'] ?? 'SÍ',
-                    'no' => $question['no_text'] ?? 'NO'
-                ],
-                'results' => $results,
-                'total' => $total,
-                'winner' => $winner,
-                'winner_text' => $winnerText,
-                'percentages' => [
-                    'yes' => $total > 0 ? round(($results['yes'] / $total) * 100, 2) : 0,
-                    'no' => $total > 0 ? round(($results['no'] / $total) * 100, 2) : 0
-                ]
-            ];
-           
+        if ($code && $qId) {
+            $db->setQuestionStatus($code, $qId, 'off');
+            $response = ['success' => true, 'message' => 'Pregunta Detenida'];
         }
         break;
 
-    case 'results_simple':
-        header('Content-Type: text/plain; charset=utf-8');
-        // Obtener resultados de una pregunta
-        $code = strtoupper($_GET['code'] ?? '');
-        $questionId = intval($_GET['question_id'] ?? 0);
-        
-        if ($code && $questionId) {
-            $results = $db->getResults($code, $questionId);
-            $question = $db->getQuestion($questionId);
-            $total = $results['yes'] + $results['no'];
-            
-            $winner = 'empate';
-            $winnerText = 'Empate';
-            if ($results['yes'] >= $results['no']) { //NO PUEDE HABER EMPATES
-                $winner = 'yes';
-                $winnerText = $question['yes_text'] ?? 'SÍ';
-            } elseif ($results['no'] > $results['yes']) {
-                $winner = 'no';
-                $winnerText = $question['no_text'] ?? 'NO';
-            }
-            
-            $respuesta_simple = $winner;
-        }
-    break;
-    
     case 'check':
-        // Verificar pregunta activa (usado por participantes)
-        $code = strtoupper($_GET['code'] ?? '');
-        
+        // Polling del participante y la pantalla
         if ($code) {
-            $questionId = $db->getCurrentQuestion($code);
-            
-            if ($questionId) {
-                $question = $db->getQuestion($questionId);
+            $status = $db->getCurrentStatus($code);
+            if ($status) {
+                $q = $db->getQuestion($status['question_id']);
+                
+                // Calcular tiempo restante si aplica
+                $remaining = null;
+                if ($q['timer_seconds'] > 0) {
+                    $elapsed = time() - $status['start_time'];
+                    $remaining = max(0, $q['timer_seconds'] - $elapsed);
+                    
+                    // Si el tiempo expiró server-side pero sigue 'on', lo notificamos
+                    // (La pantalla y cliente se bloquearán visualmente, el admin debe dar OFF manual o auto-off script)
+                }
+
                 $response = [
                     'success' => true,
-                    'question_id' => $questionId,
-                    'question_text' => $question['text'] ?? '',
-                    'yes_text' => $question['yes_text'] ?? 'SÍ',
-                    'no_text' => $question['no_text'] ?? 'NO'
+                    'active' => true,
+                    'question' => [
+                        'id' => $q['id'],
+                        'text' => $q['text'],
+                        'options' => $q['options'],
+                        'timer_total' => $q['timer_seconds'],
+                        'timer_remaining' => $remaining
+                    ]
                 ];
             } else {
-                $response = [
-                    'success' => true,
-                    'question_id' => null,
-                    'question_text' => '',
-                    'yes_text' => '',
-                    'no_text' => ''
-                ];
+                $response = ['success' => true, 'active' => false];
             }
         }
         break;
-    
+
     case 'answer':
-        // Registrar respuesta de participante
-        $code = strtoupper($_POST['code'] ?? '');
-        $questionId = intval($_POST['question_id'] ?? 0);
-        $participantId = $_POST['participant_id'] ?? '';
-        $answer = $_POST['answer'] ?? '';
+        $uid = $_POST['participant_id'] ?? '';
+        $ans = intval($_POST['answer_index'] ?? 0);
         
-        if ($code && $questionId && $participantId && in_array($answer, ['yes', 'no'])) {
-            // Verificar que la pregunta esté activa
-            $status = $db->getQuestionStatus($code, $questionId);
-            
-            if ($status === 'on') {
-                $db->saveAnswer($code, $questionId, $participantId, $answer);
-                $response = [
-                    'success' => true,
-                    'message' => 'Respuesta registrada'
-                ];
+        if ($code && $qId && $uid && $ans) {
+            if ($db->saveAnswer($code, $qId, $uid, $ans)) {
+                $response = ['success' => true, 'message' => 'Voto registrado'];
             } else {
-                $response = [
-                    'success' => false,
-                    'message' => 'La pregunta no está activa'
-                ];
+                $response = ['success' => false, 'message' => 'Tiempo agotado o error'];
             }
         }
         break;
-    
+
+    case 'results':
+        if ($code && $qId) {
+            $data = $db->getResults($code, $qId);
+            $q = $db->getQuestion($qId);
+            $response = [
+                'success' => true,
+                'question_text' => $q['text'],
+                'results' => $data['data'],
+                'total' => $data['total']
+            ];
+        }
+        break;
+        
     case 'reset':
-        // Reiniciar respuestas de una pregunta
-        $code = strtoupper($_GET['code'] ?? '');
-        $questionId = intval($_GET['question_id'] ?? 0);
-        
-        if ($code && $questionId) {
-            $db->resetAnswers($code, $questionId);
-            $response = [
-                'success' => true,
-                'message' => 'Respuestas reiniciadas',
-                'code' => $code,
-                'question_id' => $questionId
-            ];
+        if ($code && $qId) {
+            $db->resetAnswers($code, $qId);
+            $response = ['success' => true];
         }
-        break;
-    
-    case 'reset_all':
-        // Reiniciar todas las respuestas de una instancia
-        $code = strtoupper($_GET['code'] ?? '');
-        
-        if ($code) {
-            $db->resetAllAnswers($code);
-            $response = [
-                'success' => true,
-                'message' => 'Todas las respuestas reiniciadas',
-                'code' => $code
-            ];
-        }
-        break;
-    
-    case 'status':
-        // Estado general del sistema (útil para debugging)
-        $code = strtoupper($_GET['code'] ?? '');
-        
-        if ($code) {
-            $questions = $db->getQuestions();
-            $statuses = [];
-            
-            foreach ($questions as $q) {
-                $statuses[] = [
-                    'id' => $q['id'],
-                    'text' => $q['text'],
-                    'yes_text' => $q['yes_text'],
-                    'no_text' => $q['no_text'],
-                    'status' => $db->getQuestionStatus($code, $q['id']),
-                    'results' => $db->getResults($code, $q['id'])
-                ];
-            }
-            
-            $response = [
-                'success' => true,
-                'code' => $code,
-                'questions' => $statuses
-            ];
-        }
-        break;
-    
-    case 'questions':
-        // Listar todas las preguntas
-        $questions = $db->getQuestions();
-        $response = [
-            'success' => true,
-            'questions' => $questions
-        ];
         break;
 }
 
-if (empty($respuesta_simple)) {
-    echo json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-} else {
-    echo $respuesta_simple;
-}
-
+echo json_encode($response);
 ?>
