@@ -423,7 +423,7 @@ $participantId = $_SESSION['participant_id'];
         
         <div id="status">
             <div class="loader"></div>
-            <div class="waiting-text">Esperando, esta pantalla se actualizará automáticamente...</div>
+            <div class="waiting-text">Esta pantalla se actualizará automáticamente...</div>
         </div>
         
         <div id="questionBox" class="question-box">
