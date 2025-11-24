@@ -123,4 +123,94 @@ class Database {
             INSERT OR REPLACE INTO question_status (survey_code, question_id, status, start_time, updated_at) 
             VALUES (:survey_code, :question_id, :status, :start, CURRENT_TIMESTAMP)
         ");
-        $stmt->bindValue(
+        $stmt->bindValue(':survey_code', $surveyCode, SQLITE3_TEXT);
+        $stmt->bindValue(':question_id', $questionId, SQLITE3_INTEGER);
+        $stmt->bindValue(':status', $status, SQLITE3_TEXT);
+        $stmt->bindValue(':start', $startTime, SQLITE3_INTEGER);
+        return $stmt->execute();
+    }
+    
+    public function getCurrentStatus($surveyCode) {
+        // Obtiene información completa de la pregunta activa y su tiempo
+        $stmt = $this->db->prepare("
+            SELECT qs.*, q.timer_seconds 
+            FROM question_status qs
+            JOIN questions q ON qs.question_id = q.id
+            WHERE qs.survey_code = :code AND qs.status = 'on'
+            ORDER BY qs.updated_at DESC LIMIT 1
+        ");
+        $stmt->bindValue(':code', $surveyCode, SQLITE3_TEXT);
+        $res = $stmt->execute();
+        return $res->fetchArray(SQLITE3_ASSOC);
+    }
+    
+    // --- RESPUESTAS ---
+
+    public function saveAnswer($surveyCode, $questionId, $sessionId, $answerIndex) {
+        // Verificar tiempo si hay temporizador
+        $status = $this->getCurrentStatus($surveyCode);
+        if ($status && $status['question_id'] == $questionId && $status['timer_seconds'] > 0) {
+            $elapsed = time() - $status['start_time'];
+            // Margen de 3 segundos por latencia de red
+            if ($elapsed > ($status['timer_seconds'] + 3)) {
+                return false; // Tiempo expirado
+            }
+        }
+
+        $stmt = $this->db->prepare("
+            INSERT OR REPLACE INTO answers (survey_code, question_id, session_id, answer_index, created_at) 
+            VALUES (:survey_code, :question_id, :session_id, :answer, CURRENT_TIMESTAMP)
+        ");
+        $stmt->bindValue(':survey_code', $surveyCode, SQLITE3_TEXT);
+        $stmt->bindValue(':question_id', $questionId, SQLITE3_INTEGER);
+        $stmt->bindValue(':session_id', $sessionId, SQLITE3_TEXT);
+        $stmt->bindValue(':answer', $answerIndex, SQLITE3_INTEGER);
+        return $stmt->execute();
+    }
+    
+    public function getResults($surveyCode, $questionId) {
+        // Inicializar contadores a 0 para todas las opciones
+        $options = $this->getOptions($questionId);
+        $results = [];
+        foreach ($options as $opt) {
+            $results[$opt['option_index']] = [
+                'text' => $opt['text'],
+                'count' => 0
+            ];
+        }
+
+        $stmt = $this->db->prepare("
+            SELECT answer_index, COUNT(*) as count 
+            FROM answers 
+            WHERE survey_code = :survey_code AND question_id = :question_id 
+            GROUP BY answer_index
+        ");
+        $stmt->bindValue(':survey_code', $surveyCode, SQLITE3_TEXT);
+        $stmt->bindValue(':question_id', $questionId, SQLITE3_INTEGER);
+        $result = $stmt->execute();
+        
+        $total = 0;
+        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+            if (isset($results[$row['answer_index']])) {
+                $results[$row['answer_index']]['count'] = $row['count'];
+                $total += $row['count'];
+            }
+        }
+        
+        return ['data' => $results, 'total' => $total];
+    }
+    
+    public function resetAnswers($surveyCode, $questionId) {
+        $stmt = $this->db->prepare("DELETE FROM answers WHERE survey_code = :c AND question_id = :q");
+        $stmt->bindValue(':c', $surveyCode);
+        $stmt->bindValue(':q', $questionId);
+        return $stmt->execute();
+    }
+    
+    public function resetAllAnswers($surveyCode) {
+        $stmt = $this->db->prepare("DELETE FROM answers WHERE survey_code = :c");
+        $stmt->bindValue(':c', $surveyCode);
+        return $stmt->execute();
+    }
+}
+?>
