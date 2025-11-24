@@ -641,17 +641,17 @@ $instances = $db->getSurveyInstances();
                                     </select>
                                     <button class="btn btn-go" onclick="openApi('go', document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">▶ GO</button>
                                     <button class="btn btn-off" onclick="openApi('off', document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">⏹ OFF</button>
-                                    <button class="btn btn-results" onclick="openResults(document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">Resultados visual</button>
+                                    <button class="btn btn-results" onclick="openResults(document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">Resultado visual</button>
                                     <button class="btn btn-results" onclick="openApi('results', document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">API JSON</button>
                                     <button class="btn btn-results" onclick="openApi('results_simple', document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">API Ganador</button>
 
                                 </div>
                                 <div style="margin-top: 10px;">
-                                    <button class="btn btn-edit" onclick='editQuestion(<?php echo json_encode($question); ?>)'>✏️ Editar</button>
+                                    <button class="btn btn-edit" onclick='editQuestion(<?php echo json_encode($question); ?>)'>✏️</button>
                                     <form method="POST" style="display: inline;" onsubmit="return confirm('¿Eliminar esta pregunta?');">
                                         <input type="hidden" name="action" value="delete_question">
                                         <input type="hidden" name="question_id" value="<?php echo $question['id']; ?>">
-                                        <button type="submit" class="btn btn-danger">🗑️ Eliminar</button>
+                                        <button type="submit" class="btn btn-danger">🗑️</button>
                                     </form>
                                 </div>
                             </div>
