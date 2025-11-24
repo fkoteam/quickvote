@@ -641,7 +641,10 @@ $instances = $db->getSurveyInstances();
                                     </select>
                                     <button class="btn btn-go" onclick="openApi('go', document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">▶ GO</button>
                                     <button class="btn btn-off" onclick="openApi('off', document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">⏹ OFF</button>
-                                    <button class="btn btn-results" onclick="openResults(document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">📊 Resultados</button>
+                                    <button class="btn btn-results" onclick="openResults(document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">Resultados visual</button>
+                                    <button class="btn btn-results" onclick="openApi('results', document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">API JSON</button>
+                                    <button class="btn btn-results" onclick="openApi('results_simple', document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">API Ganador</button>
+
                                 </div>
                                 <div style="margin-top: 10px;">
                                     <button class="btn btn-edit" onclick='editQuestion(<?php echo json_encode($question); ?>)'>✏️ Editar</button>
