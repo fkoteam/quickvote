@@ -522,7 +522,7 @@ $participantId = $_SESSION['participant_id'];
                 }
                 
                 updateTimerDisplay();
-            }, 1000);
+            }, 100);
             
             updateTimerDisplay();
         }
