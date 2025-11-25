@@ -178,6 +178,8 @@ switch ($action) {
         $questionId = intval($_POST['question_id'] ?? 0);
         $participantId = $_POST['participant_id'] ?? '';
         $answer = intval($_POST['answer'] ?? 0);
+        session_start();
+        $email = $_SESSION['participant_email'] ?? null;
         
         if ($code && $questionId && $participantId && $answer > 0) {
             $statusData = $db->getQuestionStatus($code, $questionId);
