@@ -189,7 +189,7 @@ switch ($action) {
                 
                 // Verificar que la respuesta está en el rango válido
                 if ($answer <= $question['num_options']) {
-                    $db->saveAnswer($code, $questionId, $participantId, $answer);
+                    $db->saveAnswer($code, $questionId, $participantId, $answer, $email);
                     $response = [
                         'success' => true,
                         'message' => 'Respuesta registrada'
