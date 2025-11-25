@@ -15,6 +15,10 @@ if (!isset($_SESSION['participant_id'])) {
     $_SESSION['participant_id'] = uniqid('part_', true);
 }
 $participantId = $_SESSION['participant_id'];
+
+if (isset($_GET['email']) && filter_var($_GET['email'], FILTER_VALIDATE_EMAIL)) {
+    $_SESSION['participant_email'] = trim($_GET['email']);
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
