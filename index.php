@@ -7,7 +7,7 @@ session_start();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tus respuestas marcarán el camino</title>
+    <title>Tus respuestas marcan el camino</title>
     <style>
         * {
             margin: 0;
@@ -174,6 +174,9 @@ session_start();
                        autocomplete="off"
                        pattern="[A-Za-z0-9]+"
                        maxlength="10">
+            </div>
+            <div class="input-group">
+                <input type="email" name="email" placeholder="Tu Email (Opcional)" style="width: 100%; padding: 18px 25px; font-size: 1.3em; border: 2px solid rgba(138,43,226,0.5); border-radius: 12px; text-align: center; background: rgba(0,0,0,0.5); color: #fff;">
             </div>
             <button type="submit">Ingresar</button>
         </form>
