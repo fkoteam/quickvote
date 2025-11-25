@@ -130,7 +130,7 @@ switch ($action) {
         $code = strtoupper($_GET['code'] ?? '');
         if ($code) {
             $questions = $db->getQuestions();
-            $emails = $db->getParticipantsWithEmail($code);
+            $emails = $db->getEmailsByInstance($code);
             $count = 0;
             
             // Pre-calcular resultados globales para eficiencia
