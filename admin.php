@@ -560,6 +560,10 @@ $instances = $db->getSurveyInstances();
                                     <input type="hidden" name="code" value="<?php echo $instance['code']; ?>">
                                     <button type="submit" class="btn btn-danger">🗑️ Eliminar</button>
                                 </form>
+                                <button type="button" class="btn btn-primary" 
+                                        onclick="if(confirm('¿Enviar resultados por email a todos los participantes de <?php echo $instance['code']; ?>?')) sendEmails('<?php echo $instance['code']; ?>')">
+                                    📧 Enviar Reporte por mail
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -644,6 +648,7 @@ $instances = $db->getSurveyInstances();
                                     <button class="btn btn-results" onclick="openResults(document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">Resultado visual</button>
                                     <button class="btn btn-results" onclick="openApi('results', document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">API JSON</button>
                                     <button class="btn btn-results" onclick="openApi('results_simple', document.getElementById('instance_q<?php echo $question['id']; ?>').value, <?php echo $question['id']; ?>)">API Ganador</button>
+
 
                                 </div>
                                 <div style="margin-top: 10px;">
@@ -801,6 +806,13 @@ $instances = $db->getSurveyInstances();
 
         // Inicializar formulario de creación
         updateOptionsInputs(2);
+
+        function sendEmails(code) {
+            fetch(`api.php?action=send_emails&code=${code}`)
+                .then(r => r.json())
+                .then(data => alert(data.message))
+                .catch(e => alert('Error al enviar correos'));
+        }
     </script>
 </body>
 </html>
