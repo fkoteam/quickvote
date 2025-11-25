@@ -112,13 +112,86 @@ switch ($action) {
             
             for ($i = 1; $i <= $question['num_options']; $i++) {
                 $votes = $results[$i] ?? 0;
-                if ($votes >= $maxVotes) {
+                if ($votes > $maxVotes) {
                     $maxVotes = $votes;
                     $winner = $i;
                 }
             }
+
+
+                        
             
             $respuesta_simple = (string)$winner;
+        }
+        break;
+
+
+    case 'send_emails':
+        $code = strtoupper($_GET['code'] ?? '');
+        if ($code) {
+            $questions = $db->getQuestions();
+            $emails = $db->getParticipantsWithEmail($code);
+            $count = 0;
+            
+            // Pre-calcular resultados globales para eficiencia
+            $globalStats = [];
+            foreach ($questions as $q) {
+                $rawResults = $db->getResults($code, $q['id']);
+                $total = array_sum($rawResults);
+                $percentages = [];
+                for($i=1; $i<=$q['num_options']; $i++){
+                    $votes = $rawResults[$i] ?? 0;
+                    $percentages[$i] = $total > 0 ? round(($votes/$total)*100, 1) : 0;
+                }
+                $globalStats[$q['id']] = $percentages;
+            }
+
+            // Enviar a cada usuario
+            foreach ($emails as $email) {
+                $userAnswers = $db->getUserAnswers($code, $email);
+                
+                $subject = "Resultados de la Encuesta: $code";
+                $message = "<html><body style='font-family: sans-serif; background: #f4f4f4; padding: 20px;'>";
+                $message .= "<div style='max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 10px;'>";
+                $message .= "<h1 style='color: #8a2be2;'>Tus Resultados ($code)</h1>";
+                
+                foreach ($questions as $q) {
+                    // Solo incluir preguntas que el usuario respondió
+                    if (isset($userAnswers[$q['id']])) {
+                        $userChoiceIdx = $userAnswers[$q['id']];
+                        $labels = json_decode($q['option_labels'], true);
+                        $userLabel = $labels[$userChoiceIdx - 1] ?? 'Desconocido';
+                        
+                        $message .= "<div style='margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;'>";
+                        $message .= "<h3 style='margin-bottom: 5px;'>{$q['text']}</h3>";
+                        $message .= "<p>Tú elegiste: <strong>{$userLabel}</strong></p>";
+                        $message .= "<div style='background: #eee; border-radius: 5px; padding: 10px; font-size: 0.9em;'>";
+                        $message .= "<strong>Resultados globales:</strong><br>";
+                        
+                        foreach ($globalStats[$q['id']] as $idx => $pct) {
+                            $optLabel = $labels[$idx - 1];
+                            $isUser = ($idx == $userChoiceIdx) ? " (Tú)" : "";
+                            $barColor = ($idx == $userChoiceIdx) ? "#8a2be2" : "#ccc";
+                            $message .= "<div style='margin-top: 5px;'>$optLabel $isUser: $pct%</div>";
+                            $message .= "<div style='height: 6px; width: {$pct}%; background: $barColor; border-radius: 3px;'></div>";
+                        }
+                        $message .= "</div></div>";
+                    }
+                }
+                
+                $message .= "</div></body></html>";
+                
+                // Headers para HTML
+                $headers = "MIME-Version: 1.0" . "\r\n";
+                $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
+                $headers .= 'From: Encuestas <no-reply@tudominio.com>' . "\r\n";
+
+                if(mail($email, $subject, $message, $headers)) {
+                    $count++;
+                }
+            }
+            
+            $response = ['success' => true, 'message' => "Enviados $count correos exitosamente."];
         }
         break;
     
